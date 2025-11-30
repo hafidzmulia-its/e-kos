@@ -231,43 +231,29 @@ export class KosModel {
     }));
   }
 
-  // Get user's own kos listings
-  static async getUserKosListings(ownerId: string): Promise<KosListing[]> {
+  // Alias for admin API compatibility
+  static async getAllKosListings(): Promise<KosListingWithDetails[]> {
+    return this.getAllKos();
+  }
+
+  // Get kos listings by owner email
+  static async getKosListingsByOwner(ownerEmail: string): Promise<KosListing[]> {
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', ownerEmail)
+      .single();
+
+    if (userError) throw userError;
+    if (!user) return [];
+
     const { data, error } = await supabase
       .from('kos_listings')
       .select('*')
-      .eq('owner_id', ownerId)
+      .eq('owner_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data || [];
-  }
-
-  // Get all kos listings for admin with owner information
-  static async getAllKosForAdmin() {
-    const client = supabaseAdmin || supabase;
-    
-    const { data, error } = await client
-      .from('kos_listings')
-      .select(`
-        id,
-        title,
-        slug,
-        gender,
-        monthly_price,
-        available_rooms,
-        total_rooms,
-        address,
-        created_at,
-        owner:users!kos_listings_owner_id_fkey (
-          id,
-          name,
-          email
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data;
   }
 }

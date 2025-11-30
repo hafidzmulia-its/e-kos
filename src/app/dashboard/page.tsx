@@ -1,21 +1,22 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import Navigation from '@/components/navigation';
 import Link from 'next/link';
-import { Plus, Edit, Trash2, Eye, MapPin, DollarSign, Users } from 'lucide-react';
+import { Plus, MapPin, Users, DollarSign, Bed, Edit3, Trash2 } from 'lucide-react';
 
 interface KosListing {
   id: number;
   title: string;
   slug: string;
+  address: string;
   gender: string;
   monthly_price: number;
   available_rooms: number;
   total_rooms: number;
-  address: string;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -27,34 +28,36 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (!session) {
-      router.push('/api/auth/signin?callbackUrl=/dashboard');
+    if (status === 'unauthenticated') {
+      router.push('/api/auth/signin');
       return;
     }
 
-    fetchUserKos();
-  }, [session, status, router]);
+    if (status === 'authenticated') {
+      loadKosListings();
+    }
+  }, [status, router]);
 
-  const fetchUserKos = async () => {
+  const loadKosListings = async () => {
     try {
-      setLoading(true);
       const response = await fetch('/api/kos/my');
-      if (!response.ok) {
-        throw new Error('Failed to fetch your kos listings');
+      if (response.ok) {
+        const result = await response.json();
+        setKosListings(result.data || []);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to load listings');
       }
-      const data = await response.json();
-      setKosListings(data.data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load kos listings');
+    } catch (error) {
+      console.error('Error loading kos listings:', error);
+      setError('Failed to load listings');
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteKos = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this kos listing?')) {
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this listing?')) {
       return;
     }
 
@@ -63,29 +66,39 @@ export default function DashboardPage() {
         method: 'DELETE',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete kos');
+      if (response.ok) {
+        setKosListings(prev => prev.filter(kos => kos.id !== id));
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to delete listing');
       }
+    } catch (error) {
+      console.error('Error deleting kos:', error);
+      alert('Failed to delete listing');
+    }
+  };
 
-      // Remove from local state
-      setKosListings(prev => prev.filter(kos => kos.id !== id));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete kos');
+  const getGenderDisplay = (gender: string) => {
+    switch (gender) {
+      case 'PUTRA': return 'Male';
+      case 'PUTRI': return 'Female';
+      case 'CAMPUR': return 'Mixed';
+      default: return gender;
     }
   };
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+      <main className="min-h-screen bg-gray-50">
+        <Navigation />
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
-      </div>
+      </main>
     );
   }
 
-  if (!session) {
+  if (status === 'unauthenticated') {
     return null; // Will redirect
   }
 
@@ -99,155 +112,173 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                My Kos Listings
+                My Dashboard
               </h1>
               <p className="mt-1 text-sm text-gray-600">
-                Manage your boarding house listings
+                Manage your kos listings and view analytics
               </p>
             </div>
+            
             <Link
               href="/dashboard/kos/new"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add New Kos</span>
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Kos
             </Link>
           </div>
         </div>
       </div>
 
+      {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <MapPin className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Listings</p>
+                <p className="text-2xl font-bold text-gray-900">{kosListings.length}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Bed className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Available Rooms</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {kosListings.reduce((sum, kos) => sum + kos.available_rooms, 0)}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Users className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Rooms</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {kosListings.reduce((sum, kos) => sum + kos.total_rooms, 0)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Display */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            <p className="font-medium">Error</p>
-            <p>{error}</p>
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-6">
+            <span className="block sm:inline">{error}</span>
           </div>
         )}
 
-        {kosListings.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="bg-white rounded-lg shadow-sm p-8">
-              <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+        {/* Listings */}
+        <div className="bg-white rounded-lg shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Your Kos Listings
+            </h2>
+          </div>
+          
+          {kosListings.length === 0 ? (
+            <div className="text-center py-12">
+              <MapPin className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
                 No kos listings yet
               </h3>
-              <p className="text-gray-600 mb-6">
-                Start by creating your first kos listing to help students find your boarding house.
+              <p className="mt-1 text-sm text-gray-500">
+                Get started by creating your first kos listing.
               </p>
-              <Link
-                href="/dashboard/kos/new"
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Create First Kos</span>
-              </Link>
+              <div className="mt-6">
+                <Link
+                  href="/dashboard/kos/new"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add New Kos
+                </Link>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {kosListings.map((kos) => (
-              <div key={kos.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {kos.title}
-                    </h3>
-                    
-                    <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-600">
-                      <div className="flex items-center">
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {kosListings.map((kos) => (
+                <div key={kos.id} className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          <Link 
+                            href={`/kos/${kos.slug}`}
+                            className="hover:text-blue-600 transition-colors"
+                          >
+                            {kos.title}
+                          </Link>
+                        </h3>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          kos.is_active 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {kos.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      
+                      <div className="mt-1 flex items-center text-sm text-gray-600">
                         <MapPin className="w-4 h-4 mr-1" />
-                        {kos.address}
+                        <span>{kos.address}</span>
                       </div>
                       
-                      <div className="flex items-center">
-                        <Users className="w-4 h-4 mr-1" />
-                        <span className="capitalize">{kos.gender.toLowerCase()}</span>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <DollarSign className="w-4 h-4 mr-1" />
-                        Rp {kos.monthly_price.toLocaleString('id-ID')}/month
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <span>{kos.available_rooms} of {kos.total_rooms} rooms available</span>
+                      <div className="mt-2 flex flex-wrap gap-4 text-sm">
+                        <div className="flex items-center text-gray-600">
+                          <Users className="w-4 h-4 mr-1" />
+                          <span>{getGenderDisplay(kos.gender)}</span>
+                        </div>
+                        
+                        <div className="flex items-center text-gray-600">
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          <span>Rp {kos.monthly_price.toLocaleString('id-ID')}/month</span>
+                        </div>
+                        
+                        <div className="flex items-center text-gray-600">
+                          <Bed className="w-4 h-4 mr-1" />
+                          <span>{kos.available_rooms}/{kos.total_rooms} rooms</span>
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span>Created: {new Date(kos.created_at).toLocaleDateString()}</span>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        kos.available_rooms > 0 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {kos.available_rooms > 0 ? 'Available' : 'Full'}
-                      </span>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <Link
+                        href={`/dashboard/kos/${kos.id}/edit`}
+                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <Edit3 className="w-4 h-4 mr-1" />
+                        Edit
+                      </Link>
+                      
+                      <button
+                        onClick={() => handleDelete(kos.id)}
+                        className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
+                      </button>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 ml-4">
-                    <Link
-                      href={`/kos/${kos.slug}`}
-                      className="text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                      title="View Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Link>
-                    
-                    <Link
-                      href={`/dashboard/kos/${kos.id}/edit`}
-                      className="text-gray-600 hover:text-blue-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Link>
-                    
-                    <button
-                      onClick={() => deleteKos(kos.id)}
-                      className="text-gray-600 hover:text-red-600 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Quick Stats */}
-        {kosListings.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">
-                {kosListings.length}
-              </div>
-              <div className="text-sm text-gray-600">
-                Total Listings
-              </div>
+              ))}
             </div>
-            
-            <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">
-                {kosListings.reduce((sum, kos) => sum + kos.available_rooms, 0)}
-              </div>
-              <div className="text-sm text-gray-600">
-                Available Rooms
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">
-                {kosListings.reduce((sum, kos) => sum + kos.total_rooms, 0)}
-              </div>
-              <div className="text-sm text-gray-600">
-                Total Rooms
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </main>
   );

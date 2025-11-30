@@ -2,7 +2,7 @@
 
 import { useSession, signIn, signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { MapPin, User, Settings, LogOut, Menu, X, Shield } from 'lucide-react';
+import { MapPin, User, Settings, LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Navigation() {

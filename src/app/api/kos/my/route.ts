@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { KosModel } from '@/lib/models/kos';
 
-// GET /api/kos/my - Get current user's kos listings
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.appUserId) {
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const kosListings = await KosModel.getUserKosListings(session.user.appUserId);
-
+    const kosListings = await KosModel.getKosListingsByOwner(session.user.email);
+    
     return NextResponse.json({
       data: kosListings,
-      message: 'User kos listings retrieved successfully'
+      message: 'Kos listings retrieved successfully'
     });
   } catch (error) {
     console.error('Error fetching user kos listings:', error);

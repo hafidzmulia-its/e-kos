@@ -49,8 +49,8 @@ export default function NewKosPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!session?.user?.appUserId) {
-      setError('You must be logged in to create a kos listing');
+    if (!session?.user?.email) {
+      setError('You must be signed in to create a listing');
       return;
     }
 
@@ -119,15 +119,16 @@ export default function NewKosPage() {
         </div>
       </div>
 
+      {/* Form */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            <p className="font-medium">Error</p>
-            <p>{error}</p>
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-8 space-y-8">
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
+              <span className="block sm:inline">{error}</span>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
           {/* Basic Information */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -137,7 +138,7 @@ export default function NewKosPage() {
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                  Kos Title *
+                  Kos Name *
                 </label>
                 <input
                   type="text"
@@ -203,15 +204,15 @@ export default function NewKosPage() {
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="PUTRA">Putra (Male)</option>
-                  <option value="PUTRI">Putri (Female)</option>
-                  <option value="CAMPUR">Campur (Mixed)</option>
+                  <option value="PUTRA">Male Only</option>
+                  <option value="PUTRI">Female Only</option>
+                  <option value="CAMPUR">Mixed</option>
                 </select>
               </div>
 
               <div>
                 <label htmlFor="monthly_price" className="block text-sm font-medium text-gray-700 mb-1">
-                  Monthly Price (Rp) *
+                  Monthly Price (IDR) *
                 </label>
                 <input
                   type="number"
@@ -219,27 +220,10 @@ export default function NewKosPage() {
                   name="monthly_price"
                   required
                   min="0"
-                  step="1000"
                   value={formData.monthly_price}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., 850000"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="available_rooms" className="block text-sm font-medium text-gray-700 mb-1">
-                  Available Rooms *
-                </label>
-                <input
-                  type="number"
-                  id="available_rooms"
-                  name="available_rooms"
-                  required
-                  min="0"
-                  value={formData.available_rooms}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="500000"
                 />
               </div>
 
@@ -256,6 +240,25 @@ export default function NewKosPage() {
                   value={formData.total_rooms}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="10"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="available_rooms" className="block text-sm font-medium text-gray-700 mb-1">
+                  Available Rooms *
+                </label>
+                <input
+                  type="number"
+                  id="available_rooms"
+                  name="available_rooms"
+                  required
+                  min="0"
+                  max={formData.total_rooms}
+                  value={formData.available_rooms}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="5"
                 />
               </div>
             </div>
@@ -264,7 +267,7 @@ export default function NewKosPage() {
           {/* Location */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Location
+              Location Coordinates
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -277,7 +280,7 @@ export default function NewKosPage() {
                   id="latitude"
                   name="latitude"
                   required
-                  step="0.000001"
+                  step="any"
                   value={formData.latitude}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -294,7 +297,7 @@ export default function NewKosPage() {
                   id="longitude"
                   name="longitude"
                   required
-                  step="0.000001"
+                  step="any"
                   value={formData.longitude}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
