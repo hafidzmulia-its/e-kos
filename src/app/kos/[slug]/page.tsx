@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { KosModel } from '@/lib/models/kos';
 import Navigation from '@/components/navigation';
 import Link from 'next/link';
-import { MapPin, Users, DollarSign, Bed, ArrowLeft } from 'lucide-react';
+import Image from 'next/image';
+import { MapPin, Users, DollarSign, Bed, ArrowLeft, ImageIcon } from 'lucide-react';
 
 interface KosDetailPageProps {
   params: {
@@ -116,6 +117,62 @@ export default async function KosDetailPage({ params }: KosDetailPageProps) {
                 {kos.description || 'No description available.'}
               </p>
             </div>
+
+            {/* Image Gallery */}
+            {kos.image_urls && kos.image_urls.length > 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  Images
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {kos.image_urls.map((imageUrl, index) => (
+                    <div 
+                      key={index} 
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
+                        imageUrl === kos.cover_image_url 
+                          ? 'border-blue-500' 
+                          : 'border-gray-200'
+                      }`}
+                    >
+                      <Image
+                        src={imageUrl}
+                        alt={`${kos.title} - Image ${index + 1}`}
+                        fill
+                        className="object-cover hover:scale-105 transition-transform duration-200"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      />
+                      {imageUrl === kos.cover_image_url && (
+                        <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                          Cover
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : kos.cover_image_url ? (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  Image
+                </h2>
+                <div className="relative aspect-video rounded-lg overflow-hidden">
+                  <Image
+                    src={kos.cover_image_url}
+                    alt={kos.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 66vw"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <ImageIcon className="w-16 h-16 mb-2" />
+                  <p className="text-sm">No images available</p>
+                </div>
+              </div>
+            )}
 
             {/* Facilities */}
             {kos.facilities && kos.facilities.length > 0 && (

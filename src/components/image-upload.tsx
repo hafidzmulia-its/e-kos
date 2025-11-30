@@ -9,12 +9,24 @@ interface ImageUploadProps {
   existingCoverIndex?: number;
   maxImages?: number;
   acceptedFormats?: string[];
+  compressionQuality?: number;
+  maxWidth?: number;
+  maxHeight?: number;
+}
+
+interface CompressionOptions {
+  quality: number;
+  maxWidth: number;
+  maxHeight: number;
 }
 
 interface ImagePreview {
   file: File;
   preview: string;
   base64: string;
+  originalSize: number;
+  compressedSize: number;
+  compressionRatio: number;
 }
 
 export default function ImageUpload({
@@ -22,13 +34,59 @@ export default function ImageUpload({
   existingImages = [],
   existingCoverIndex = 0,
   maxImages = 10,
-  acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+  acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+  compressionQuality = 0.8,
+  maxWidth = 1200,
+  maxHeight = 1200
 }: ImageUploadProps) {
   const [images, setImages] = useState<ImagePreview[]>([]);
   const [coverIndex, setCoverIndex] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const compressImage = (file: File, options: CompressionOptions): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions while maintaining aspect ratio
+        let { width, height } = img;
+        
+        if (width > options.maxWidth || height > options.maxHeight) {
+          const ratio = Math.min(options.maxWidth / width, options.maxHeight / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Convert to base64 with compression
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', options.quality);
+        
+        // Log compression results
+        const originalSize = file.size;
+        const compressedSize = Math.round((compressedDataUrl.length * 3) / 4); // Approximate size
+        const compressionRatio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
+        
+        console.log(`Image compressed: ${file.name}`);
+        console.log(`Original: ${(originalSize / 1024).toFixed(1)}KB → Compressed: ${(compressedSize / 1024).toFixed(1)}KB (${compressionRatio}% reduction)`);
+        
+        resolve(compressedDataUrl);
+      };
+      
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
 
   const convertToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -40,10 +98,14 @@ export default function ImageUpload({
   };
 
   const handleFileSelect = async (files: FileList) => {
+    if (compressing) return; // Prevent multiple compressions
+    
     const newImages: ImagePreview[] = [];
+    setCompressing(true);
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      setCompressionProgress(`Processing image ${i + 1} of ${files.length}: ${file.name}`);
       
       // Validate file type
       if (!acceptedFormats.includes(file.type)) {
@@ -51,20 +113,38 @@ export default function ImageUpload({
         continue;
       }
       
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert(`File ${file.name} is too large. Max size is 5MB`);
+      // Validate file size (max 10MB before compression)
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File ${file.name} is too large. Max size is 10MB`);
         continue;
       }
       
       try {
-        const base64 = await convertToBase64(file);
+        // Compress image before converting to base64
+        const compressedBase64 = await compressImage(file, {
+          quality: compressionQuality,
+          maxWidth,
+          maxHeight
+        });
+        
+        // Calculate compression ratio
+        const originalSize = file.size;
+        const compressedSize = Math.round((compressedBase64.length * 3) / 4);
+        const compressionRatio = ((originalSize - compressedSize) / originalSize * 100);
+        
+        // Log compression results
+        console.log(`Image compressed: ${file.name}`);
+        console.log(`Original: ${(originalSize / 1024).toFixed(1)}KB → Compressed: ${(compressedSize / 1024).toFixed(1)}KB (${compressionRatio.toFixed(1)}% reduction)`);
+        
         const preview = URL.createObjectURL(file);
         
         newImages.push({
           file,
           preview,
-          base64
+          base64: compressedBase64,
+          originalSize,
+          compressedSize,
+          compressionRatio
         });
       } catch (error) {
         console.error('Error processing file:', error);
@@ -83,6 +163,9 @@ export default function ImageUpload({
     // Send base64 strings to parent
     const base64Images = updatedImages.map(img => img.base64);
     onImagesChange(base64Images, coverIndex);
+    
+    setCompressing(false);
+    setCompressionProgress('');
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -135,12 +218,14 @@ export default function ImageUpload({
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
           dragOver 
             ? 'border-blue-500 bg-blue-50' 
+            : compressing
+            ? 'border-orange-500 bg-orange-50'
             : 'border-gray-300 hover:border-gray-400'
-        }`}
+        } ${compressing ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         onDrop={handleDrop}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !compressing && fileInputRef.current?.click()}
       >
         <input
           ref={fileInputRef}
@@ -153,13 +238,20 @@ export default function ImageUpload({
         
         <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Upload Kos Images
+          {compressing ? 'Compressing Images...' : 'Upload Kos Images'}
         </h3>
-        <p className="text-gray-600 mb-4">
-          Drag and drop images here, or click to select files
-        </p>
+        {compressing ? (
+          <p className="text-orange-600 mb-4 font-medium">
+            {compressionProgress}
+          </p>
+        ) : (
+          <p className="text-gray-600 mb-4">
+            Drag and drop images here, or click to select files
+          </p>
+        )}
         <p className="text-sm text-gray-500">
-          Supported formats: JPEG, PNG, WebP • Max size: 5MB each • Max {maxImages} images
+          Supported formats: JPEG, PNG, WebP • Max size: 5MB each • Max {maxImages} images<br/>
+          Images will be automatically compressed for optimal storage
         </p>
       </div>
 
@@ -191,9 +283,17 @@ export default function ImageUpload({
       {/* New Images Preview */}
       {images.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">
-            New Images ({images.length}/{maxImages})
-          </h4>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-medium text-gray-700">
+              New Images ({images.length}/{maxImages})
+            </h4>
+            {images.length > 0 && (
+              <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                Space saved: {(images.reduce((acc, img) => acc + (img.originalSize - img.compressedSize), 0) / 1024).toFixed(1)}KB
+                ({(images.reduce((acc, img) => acc + img.compressionRatio, 0) / images.length).toFixed(1)}% avg)
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {images.map((image, index) => (
               <div key={index} className="relative group">

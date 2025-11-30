@@ -13,27 +13,62 @@ export interface UploadResult {
   format: string;
   width: number;
   height: number;
+  bytes: number;
+  original_bytes?: number;
+  compression_ratio?: string;
+}
+
+export interface CompressionOptions {
+  quality?: string | number;
+  format?: 'auto' | 'jpg' | 'png' | 'webp';
+  maxWidth?: number;
+  maxHeight?: number;
 }
 
 export class CloudinaryService {
   static async uploadImage(
     base64Image: string,
     folder: string = 'kos-images',
-    transformation?: any
+    compressionOptions: CompressionOptions = {}
   ): Promise<UploadResult> {
     try {
+      const {
+        quality = 'auto:good',
+        format = 'auto',
+        maxWidth = 1200,
+        maxHeight = 1200
+      } = compressionOptions;
+
+      // Calculate original size for compression tracking
+      const originalBytes = Math.round((base64Image.length * 3) / 4);
+
       const uploadOptions: any = {
         folder,
         resource_type: 'auto',
-        quality: 'auto',
-        fetch_format: 'auto',
+        quality,
+        fetch_format: format,
+        transformation: [
+          {
+            width: maxWidth,
+            height: maxHeight,
+            crop: 'limit', // Don't upscale, only downscale if needed
+            quality
+          },
+          {
+            f_auto: true, // Automatic format selection
+            q_auto: true  // Automatic quality optimization
+          }
+        ]
       };
 
-      if (transformation) {
-        uploadOptions.transformation = transformation;
-      }
-
       const result = await cloudinary.uploader.upload(base64Image, uploadOptions);
+
+      // Calculate compression ratio
+      const compressionRatio = originalBytes > 0 
+        ? ((originalBytes - result.bytes) / originalBytes * 100).toFixed(1) + '%'
+        : 'Unknown';
+
+      console.log(`Cloudinary compression: ${(originalBytes / 1024).toFixed(1)}KB → ${(result.bytes / 1024).toFixed(1)}KB (${compressionRatio} reduction)`);
 
       return {
         public_id: result.public_id,
@@ -41,6 +76,9 @@ export class CloudinaryService {
         format: result.format,
         width: result.width,
         height: result.height,
+        bytes: result.bytes,
+        original_bytes: originalBytes,
+        compression_ratio: compressionRatio
       };
     } catch (error) {
       console.error('Cloudinary upload error:', error);
@@ -50,13 +88,28 @@ export class CloudinaryService {
 
   static async uploadMultipleImages(
     base64Images: string[],
-    folder: string = 'kos-images'
+    folder: string = 'kos-images',
+    compressionOptions: CompressionOptions = {}
   ): Promise<UploadResult[]> {
     try {
-      const uploadPromises = base64Images.map(image => 
-        this.uploadImage(image, folder)
+      console.log(`Starting batch upload of ${base64Images.length} images with compression...`);
+      
+      const uploadPromises = base64Images.map((image, index) => 
+        this.uploadImage(image, folder, compressionOptions)
       );
-      return await Promise.all(uploadPromises);
+      
+      const results = await Promise.all(uploadPromises);
+      
+      // Log total compression stats
+      const totalOriginal = results.reduce((sum, r) => sum + (r.original_bytes || 0), 0);
+      const totalCompressed = results.reduce((sum, r) => sum + r.bytes, 0);
+      const overallRatio = totalOriginal > 0 
+        ? ((totalOriginal - totalCompressed) / totalOriginal * 100).toFixed(1)
+        : '0';
+      
+      console.log(`Batch compression complete: ${(totalOriginal / 1024).toFixed(1)}KB → ${(totalCompressed / 1024).toFixed(1)}KB (${overallRatio}% total reduction)`);
+      
+      return results;
     } catch (error) {
       console.error('Multiple upload error:', error);
       throw new Error('Failed to upload multiple images');

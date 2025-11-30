@@ -6,6 +6,9 @@ import CloudinaryService from '@/lib/cloudinary';
 interface UploadRequest {
   images: string[]; // base64 encoded images
   folder?: string;
+  compressionQuality?: number;
+  maxWidth?: number;
+  maxHeight?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -20,7 +23,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { images, folder = 'kos-images' }: UploadRequest = await request.json();
+    const { 
+      images, 
+      folder = 'kos-images',
+      compressionQuality = 80,
+      maxWidth = 1200,
+      maxHeight = 1200
+    }: UploadRequest = await request.json();
 
     if (!images || !Array.isArray(images) || images.length === 0) {
       return NextResponse.json(
@@ -36,10 +45,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload images to Cloudinary
+    console.log(`Processing ${images.length} images with server-side compression...`);
+
+    // Upload images to Cloudinary with compression
     const uploadedImages = await CloudinaryService.uploadMultipleImages(
       images,
-      folder
+      folder,
+      {
+        quality: compressionQuality,
+        maxWidth,
+        maxHeight
+      }
     );
 
     return NextResponse.json({

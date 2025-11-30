@@ -5,13 +5,15 @@ import { KosModel } from '@/lib/models/kos';
 import { UpdateKosRequest } from '@/types/database';
 
 interface RouteParams {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // GET /api/kos/[id] - Get specific kos listing by ID
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const kosId = parseInt(params.id);
+    // Await params for Next.js 15+ compatibility
+    const resolvedParams = await params;
+    const kosId = parseInt(resolvedParams.id);
     
     if (isNaN(kosId)) {
       return NextResponse.json(
@@ -55,7 +57,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const kosId = parseInt(params.id);
+    // Await params for Next.js 15+ compatibility
+    const resolvedParams = await params;
+    const kosId = parseInt(resolvedParams.id);
     
     if (isNaN(kosId)) {
       return NextResponse.json(
@@ -106,7 +110,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const kosId = parseInt(params.id);
+    // Await params for Next.js 15+ compatibility
+    const resolvedParams = await params;
+    const kosId = parseInt(resolvedParams.id);
     
     if (isNaN(kosId)) {
       return NextResponse.json(

@@ -1,17 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Fix for default markers in Next.js
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+import { useEffect, useState } from 'react';
 
 interface LocationPickerProps {
   initialPosition: [number, number];
@@ -19,32 +8,12 @@ interface LocationPickerProps {
   height?: string;
 }
 
-// Component to handle map clicks
-function LocationMarker({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
-  const [position, setPosition] = useState<[number, number] | null>(null);
-
-  useMapEvents({
-    click(e) {
-      const { lat, lng } = e.latlng;
-      setPosition([lat, lng]);
-      onLocationSelect(lat, lng);
-    },
-  });
-
-  return position ? <Marker position={position} /> : null;
-}
-
 export default function LocationPicker({ 
   initialPosition, 
   onLocationSelect, 
   height = '400px' 
 }: LocationPickerProps) {
-  const [isClient, setIsClient] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<[number, number]>(initialPosition);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const handleLocationSelect = async (lat: number, lng: number) => {
     setSelectedPosition([lat, lng]);
@@ -63,44 +32,73 @@ export default function LocationPicker({
     }
   };
 
-  if (!isClient) {
-    return (
-      <div 
-        className="bg-gray-200 rounded-lg flex items-center justify-center"
-        style={{ height }}
-      >
-        <span className="text-gray-600">Loading map...</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="relative">
-      <div className="mb-2 text-sm text-gray-600">
-        📍 Click on the map to select location
-      </div>
-      <div style={{ height }} className="rounded-lg overflow-hidden border border-gray-300">
-        <MapContainer
-          center={initialPosition}
-          zoom={15}
-          style={{ height: '100%', width: '100%' }}
-          scrollWheelZoom={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    <div className="space-y-4">
+      {/* Google Maps Embed with Click Information */}
+      <div className="relative">
+        <div className="mb-2 text-sm text-gray-600">
+          📍 Use the map below for reference, then enter coordinates manually
+        </div>
+        <div style={{ height }} className="rounded-lg overflow-hidden border border-gray-300">
+          <iframe
+            src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3957.1!2d${selectedPosition[1]}!3d${selectedPosition[0]}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f15.1!3m3!1m2!1s0x0%3A0x0!2zN8KwMTYnNTUuMCJTIDExMsKwNDcnNDMuNCJF!5e0!3m2!1sen!2sid!4v1701234567890!5m2!1sen!2sid`}
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
           />
-          
-          {/* Show initial position marker */}
-          <Marker position={selectedPosition} />
-          
-          {/* Handle map clicks for new location */}
-          <LocationMarker onLocationSelect={handleLocationSelect} />
-        </MapContainer>
+        </div>
+        
+        <div className="mt-2 text-xs text-gray-500">
+          💡 Tip: Right-click on any location in Google Maps and copy the coordinates that appear
+        </div>
       </div>
       
-      <div className="mt-2 text-xs text-gray-500">
-        Current coordinates: {selectedPosition[0].toFixed(6)}, {selectedPosition[1].toFixed(6)}
+      {/* Manual Input */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-1">
+            Latitude *
+          </label>
+          <input
+            type="number"
+            id="latitude"
+            step="0.000001"
+            value={selectedPosition[0]}
+            onChange={(e) => {
+              const lat = parseFloat(e.target.value) || 0;
+              setSelectedPosition([lat, selectedPosition[1]]);
+              handleLocationSelect(lat, selectedPosition[1]);
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            placeholder="-7.2819"
+          />
+        </div>
+        <div>
+          <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-1">
+            Longitude *
+          </label>
+          <input
+            type="number"
+            id="longitude"
+            step="0.000001"
+            value={selectedPosition[1]}
+            onChange={(e) => {
+              const lng = parseFloat(e.target.value) || 0;
+              setSelectedPosition([selectedPosition[0], lng]);
+              handleLocationSelect(selectedPosition[0], lng);
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            placeholder="112.7954"
+          />
+        </div>
+      </div>
+      
+      {/* Current Location Display */}
+      <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+        📌 Current: {selectedPosition[0].toFixed(6)}, {selectedPosition[1].toFixed(6)}
       </div>
     </div>
   );

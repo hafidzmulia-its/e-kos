@@ -52,6 +52,14 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.appUserId = token.appUserId as string;
         session.user.role = token.role as 'USER' | 'ADMIN';
+        
+        // Debug logging
+        console.log('Session callback:', {
+          userEmail: session.user.email,
+          appUserId: token.appUserId,
+          role: token.role,
+          hasAppUserId: !!token.appUserId
+        });
       }
       return session;
     },

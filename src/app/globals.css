@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 :root {
   --background: #ffffff;
@@ -23,4 +24,55 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom Leaflet Marker Styles */
+.leaflet-marker-icon.putra-marker {
+  background-color: #3B82F6 !important;
+  border: 3px solid white !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+}
+
+.leaflet-marker-icon.putri-marker {
+  background-color: #EC4899 !important;
+  border: 3px solid white !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+}
+
+.leaflet-marker-icon.campur-marker {
+  background-color: #10B981 !important;
+  border: 3px solid white !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+}
+
+.leaflet-marker-icon.its-marker {
+  background-color: #DC2626 !important;
+  border: 3px solid white !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-size: 12px !important;
+  font-weight: bold !important;
+}
+
+/* Pulse animation for selected markers */
+@keyframes pulse {
+  0% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
 }
