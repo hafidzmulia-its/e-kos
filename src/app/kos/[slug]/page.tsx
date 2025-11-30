@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { KosModel } from '@/lib/models/kos';
 import Navigation from '@/components/navigation';
+import ImageGallery from '@/components/image-gallery';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Users, DollarSign, Bed, ArrowLeft, ImageIcon } from 'lucide-react';
@@ -120,36 +121,7 @@ export default async function KosDetailPage({ params }: KosDetailPageProps) {
 
             {/* Image Gallery */}
             {kos.image_urls && kos.image_urls.length > 0 ? (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  Images
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {kos.image_urls.map((imageUrl, index) => (
-                    <div 
-                      key={index} 
-                      className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
-                        imageUrl === kos.cover_image_url 
-                          ? 'border-blue-500' 
-                          : 'border-gray-200'
-                      }`}
-                    >
-                      <Image
-                        src={imageUrl}
-                        alt={`${kos.title} - Image ${index + 1}`}
-                        fill
-                        className="object-cover hover:scale-105 transition-transform duration-200"
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      />
-                      {imageUrl === kos.cover_image_url && (
-                        <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                          Cover
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ImageGallery images={kos.image_urls} title={kos.title} coverImageUrl={kos.cover_image_url} />
             ) : kos.cover_image_url ? (
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">

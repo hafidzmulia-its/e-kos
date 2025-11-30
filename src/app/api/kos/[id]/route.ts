@@ -22,8 +22,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Check if this is for admin/owner edit (skip active check)
+    const { searchParams } = new URL(request.url);
+    const skipActiveCheck = searchParams.get('skipActiveCheck') === 'true';
+
     // For now, we'll get by ID, but in real implementation you might want to get by slug
-    const kos = await KosModel.getKosDetails(kosId.toString()); // This needs to be updated to handle ID vs slug
+    const kos = await KosModel.getKosDetails(kosId.toString(), skipActiveCheck); // This needs to be updated to handle ID vs slug
     
     if (!kos) {
       return NextResponse.json(

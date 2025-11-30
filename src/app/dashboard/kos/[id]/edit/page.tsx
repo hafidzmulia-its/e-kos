@@ -23,6 +23,7 @@ interface KosListing {
   distance_to_its_km: number;
   latitude: number;
   longitude: number;
+  is_active: boolean;
   cover_image?: string;
   cover_image_url?: string;
   images?: string[];
@@ -45,6 +46,7 @@ interface FormData {
   available_rooms: number;
   latitude: number;
   longitude: number;
+  is_active: boolean;
 }
 
 interface SelectedFacility {
@@ -88,6 +90,7 @@ export default function EditKosPage({ params }: EditKosPageProps) {
     available_rooms: 0,
     latitude: -7.2819,
     longitude: 112.7954,
+    is_active: true,
   });
 
   useEffect(() => {
@@ -132,7 +135,7 @@ export default function EditKosPage({ params }: EditKosPageProps) {
 
   const fetchKos = async () => {
     try {
-      const response = await fetch(`/api/kos/${id}`);
+      const response = await fetch(`/api/kos/${id}?skipActiveCheck=true`);
       if (!response.ok) throw new Error('Failed to fetch kos');
       
       const data = await response.json();
@@ -149,6 +152,7 @@ export default function EditKosPage({ params }: EditKosPageProps) {
         available_rooms: data.data.available_rooms || 0,
         latitude: data.data.latitude || -7.2819,
         longitude: data.data.longitude || 112.7954,
+        is_active: data.data.is_active !== undefined ? data.data.is_active : true,
       });
       
       // Set existing facilities
@@ -455,6 +459,24 @@ export default function EditKosPage({ params }: EditKosPageProps) {
                   max={formData.total_rooms}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="is_active"
+                    checked={formData.is_active}
+                    onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Active Listing (Visible to users)
+                  </span>
+                </label>
+                <p className="mt-1 text-xs text-gray-500">
+                  Uncheck this to hide your listing from search results without deleting it
+                </p>
               </div>
 
               <div className="md:col-span-2">

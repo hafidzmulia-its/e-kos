@@ -60,6 +60,33 @@ export default function AdminPage() {
     }
   };
 
+  const handleToggleStatus = async (id: number, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/kos`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id,
+          is_active: !currentStatus
+        }),
+      });
+
+      if (response.ok) {
+        setKosListings(prev => prev.map(kos => 
+          kos.id === id ? { ...kos, is_active: !currentStatus } : kos
+        ));
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update status');
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
       return;
@@ -268,6 +295,18 @@ export default function AdminPage() {
                     </div>
                     
                     <div className="flex items-center space-x-2 ml-4">
+                      <button
+                        onClick={() => handleToggleStatus(kos.id, kos.is_active)}
+                        className={`inline-flex items-center px-3 py-1.5 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                          kos.is_active
+                            ? 'border-yellow-300 text-yellow-700 bg-white hover:bg-yellow-50 focus:ring-yellow-500'
+                            : 'border-green-300 text-green-700 bg-white hover:bg-green-50 focus:ring-green-500'
+                        }`}
+                        title={kos.is_active ? 'Deactivate listing' : 'Activate listing'}
+                      >
+                        {kos.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      
                       <Link
                         href={`/dashboard/kos/${kos.id}/edit`}
                         className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

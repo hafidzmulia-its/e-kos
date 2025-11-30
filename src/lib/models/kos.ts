@@ -15,8 +15,9 @@ export class KosModel {
       .from('kos_listings')
       .select(`
         id, title, slug, gender, monthly_price, 
-        latitude, longitude, distance_to_its_km, available_rooms
-      `);
+        latitude, longitude, distance_to_its_km, available_rooms, cover_image_url
+      `)
+      .eq('is_active', true); // Only show active listings
 
     // Apply filters
     if (filters?.gender) {
@@ -46,7 +47,7 @@ export class KosModel {
   }
 
   // Get single kos with full details (by ID or slug)
-  static async getKosDetails(idOrSlug: string): Promise<KosListingWithDetails | null> {
+  static async getKosDetails(idOrSlug: string, skipActiveCheck: boolean = false): Promise<KosListingWithDetails | null> {
     // Try to parse as ID first (numeric), otherwise treat as slug
     const isId = !isNaN(parseInt(idOrSlug));
     
@@ -64,6 +65,11 @@ export class KosModel {
           users!reviews_user_id_fkey(name)
         )
       `);
+    
+    // Only show active listings for public view (unless skipActiveCheck is true for admin/owner)
+    if (!skipActiveCheck) {
+      query = query.eq('is_active', true);
+    }
     
     if (isId) {
       query = query.eq('id', parseInt(idOrSlug));
@@ -256,6 +262,18 @@ export class KosModel {
     }
 
     return data;
+  }
+
+  // Update kos status (admin only)
+  static async updateKosStatus(kosId: number, isActive: boolean): Promise<void> {
+    const client = supabaseAdmin || supabase;
+    
+    const { error } = await client
+      .from('kos_listings')
+      .update({ is_active: isActive })
+      .eq('id', kosId);
+
+    if (error) throw error;
   }
 
   // Delete kos listing

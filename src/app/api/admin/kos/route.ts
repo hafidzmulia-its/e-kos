@@ -40,6 +40,49 @@ export async function GET() {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has admin role
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { id, is_active } = body;
+
+    if (!id || typeof is_active !== 'boolean') {
+      return NextResponse.json(
+        { error: 'Invalid request: id and is_active are required' },
+        { status: 400 }
+      );
+    }
+
+    await KosModel.updateKosStatus(id, is_active);
+    
+    return NextResponse.json({
+      message: 'Kos status updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating kos status:', error);
+    return NextResponse.json(
+      { error: 'Failed to update kos status' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);

@@ -95,6 +95,7 @@ export interface KosMarker {
   longitude: number;
   distance_to_its_km?: number;
   available_rooms: number;
+  cover_image_url?: string;
 }
 
 // Filter options for kos search

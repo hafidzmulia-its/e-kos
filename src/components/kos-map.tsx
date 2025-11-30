@@ -40,7 +40,7 @@ const LeafletIconFix = () => {
 };
 
 // Custom marker component for kos locations
-const KosMarkerComponent = ({ kos, onSelect, isSelected }: { kos: KosMarker; onSelect: (kos: KosMarker) => void; isSelected: boolean }) => {
+const KosMarkerComponent = ({ kos, onSelect, isSelected, markerRef }: { kos: KosMarker; onSelect: (kos: KosMarker) => void; isSelected: boolean; markerRef?: (ref: any) => void }) => {
   const [customIcon, setCustomIcon] = useState<any>(null);
 
   useEffect(() => {
@@ -77,9 +77,17 @@ const KosMarkerComponent = ({ kos, onSelect, isSelected }: { kos: KosMarker; onS
       eventHandlers={{
         click: () => onSelect(kos)
       }}
+      ref={markerRef}
     >
       <Popup>
         <div className="min-w-[200px]">
+          {kos.cover_image_url && (
+            <img 
+              src={kos.cover_image_url} 
+              alt={kos.title}
+              className="w-full h-32 object-cover rounded-lg mb-2"
+            />
+          )}
           <h3 className="font-semibold text-gray-900 mb-2">{kos.title}</h3>
           <div className="space-y-1">
             <div className="flex justify-between">
@@ -131,6 +139,7 @@ export default function KosMap({ onKosSelect }: KosMapProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedKos, setSelectedKos] = useState<KosMarker | null>(null);
   const mapRef = useRef<any>(null);
+  const markerRefs = useRef<{ [key: number]: any }>({});
 
   // Fetch kos data
   useEffect(() => {
@@ -163,7 +172,7 @@ export default function KosMap({ onKosSelect }: KosMapProps) {
     }
   };
 
-  // Function to center map on selected kos
+  // Function to center map on selected kos and open its popup
   const centerMapOnKos = (kos: KosMarker) => {
     if (mapRef.current) {
       const map = mapRef.current;
@@ -172,6 +181,17 @@ export default function KosMap({ onKosSelect }: KosMapProps) {
         animate: true,
         duration: 1 // 1 second animation
       });
+      
+      // Close all popups first
+      map.closePopup();
+      
+      // Open the popup for the selected kos after a short delay
+      setTimeout(() => {
+        const marker = markerRefs.current[kos.id];
+        if (marker) {
+          marker.openPopup();
+        }
+      }, 500); // Wait for animation to complete
     }
   };
 
@@ -212,6 +232,11 @@ export default function KosMap({ onKosSelect }: KosMapProps) {
               onSelect={(selectedKos) => {
                 setSelectedKos(selectedKos);
                 if (onKosSelect) onKosSelect(selectedKos);
+              }}
+              markerRef={(ref) => {
+                if (ref) {
+                  markerRefs.current[kos.id] = ref;
+                }
               }}
             />
           ))}
