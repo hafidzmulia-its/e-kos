@@ -256,4 +256,44 @@ export class KosModel {
     if (error) throw error;
     return data || [];
   }
+
+  // Update kos images
+  static async updateKosImages(
+    kosId: number,
+    coverImagePublicId: string,
+    coverImageUrl: string,
+    imagePublicIds: string[],
+    imageUrls: string[]
+  ): Promise<void> {
+    const client = supabaseAdmin || supabase;
+    
+    const { error } = await client
+      .from('kos_listings')
+      .update({
+        cover_image: coverImagePublicId,
+        cover_image_url: coverImageUrl,
+        images: imagePublicIds,
+        image_urls: imageUrls
+      })
+      .eq('id', kosId);
+
+    if (error) throw error;
+  }
+
+  // Get kos images
+  static async getKosImages(kosId: number): Promise<{
+    cover_image?: string;
+    cover_image_url?: string;
+    images?: string[];
+    image_urls?: string[];
+  }> {
+    const { data, error } = await supabase
+      .from('kos_listings')
+      .select('cover_image, cover_image_url, images, image_urls')
+      .eq('id', kosId)
+      .single();
+
+    if (error) throw error;
+    return data || {};
+  }
 }

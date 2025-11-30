@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body: CreateKosRequest = await request.json();
+    const body = await request.json();
 
     // Basic validation
     if (!body.title || !body.address || !body.gender || !body.monthly_price || 

@@ -37,6 +37,10 @@ export interface KosListing {
   distance_to_its_km?: number;
   available_rooms: number;
   total_rooms: number;
+  cover_image?: string; // Cloudinary public_id for main image
+  cover_image_url?: string; // Cloudinary secure_url for main image
+  images?: string[]; // Array of Cloudinary public_ids for gallery
+  image_urls?: string[]; // Array of Cloudinary secure_urls for gallery
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -116,6 +120,10 @@ export interface CreateKosRequest {
   longitude: number;
   available_rooms: number;
   total_rooms: number;
+  cover_image?: string; // Cloudinary public_id for main image
+  cover_image_url?: string; // Cloudinary secure_url for main image
+  images?: string[]; // Array of Cloudinary public_ids for gallery
+  image_urls?: string[]; // Array of Cloudinary secure_urls for gallery
   facilities?: Array<{ facility_id: number; extra_price?: number }>;
 }
 

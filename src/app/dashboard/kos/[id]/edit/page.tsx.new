@@ -1,45 +1,104 @@
 'use client';
 
-import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/navigation';
 import ImageUpload from '@/components/image-upload';
 import LocationPicker from '@/components/location-picker';
 import Link from 'next/link';
-import { ArrowLeft, Save, MapPin } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 
-interface FormData {
+interface KosListing {
+  id: number;
   title: string;
+  slug: string;
   description: string;
   address: string;
   gender: 'PUTRA' | 'PUTRI' | 'CAMPUR';
   monthly_price: number;
+  total_rooms: number;
+  available_rooms: number;
+  distance_to_its_km: number;
   latitude: number;
   longitude: number;
-  available_rooms: number;
-  total_rooms: number;
+  cover_image?: string;
+  cover_image_url?: string;
+  images?: string[];
+  image_urls?: string[];
 }
 
-export default function NewKosPage() {
-  const { data: session } = useSession();
+interface EditKosPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function EditKosPage({ params }: EditKosPageProps) {
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [kos, setKos] = useState<KosListing | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [id, setId] = useState('');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [coverIndex, setCoverIndex] = useState(0);
-  
-  const [formData, setFormData] = useState<FormData>({
+
+  // Form state
+  const [formData, setFormData] = useState({
     title: '',
     description: '',
     address: '',
-    gender: 'PUTRA',
+    gender: 'CAMPUR' as 'PUTRA' | 'PUTRI' | 'CAMPUR',
     monthly_price: 0,
-    latitude: -7.2819, // Default to ITS location
+    total_rooms: 0,
+    available_rooms: 0,
+    latitude: -7.2819,
     longitude: 112.7954,
-    available_rooms: 1,
-    total_rooms: 1,
   });
+
+  useEffect(() => {
+    params.then(p => setId(p.id));
+  }, [params]);
+
+  useEffect(() => {
+    if (status === 'loading' || !id) return;
+    
+    if (!session) {
+      router.push('/api/auth/signin');
+      return;
+    }
+
+    fetchKos();
+  }, [session, status, router, id]);
+
+  const fetchKos = async () => {
+    try {
+      const response = await fetch(`/api/kos/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch kos');
+      
+      const data = await response.json();
+      setKos(data.data);
+      
+      // Set form data
+      setFormData({
+        title: data.data.title || '',
+        description: data.data.description || '',
+        address: data.data.address || '',
+        gender: data.data.gender || 'CAMPUR',
+        monthly_price: data.data.monthly_price || 0,
+        total_rooms: data.data.total_rooms || 0,
+        available_rooms: data.data.available_rooms || 0,
+        latitude: data.data.latitude || -7.2819,
+        longitude: data.data.longitude || 112.7954,
+      });
+      
+    } catch (error) {
+      console.error('Error fetching kos:', error);
+      setError('Failed to load kos listing');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLocationSelect = (lat: number, lng: number, address?: string) => {
     setFormData(prev => ({
@@ -82,71 +141,45 @@ export default function NewKosPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!session?.user?.email) {
-      setError('Please sign in to create a kos listing');
-      return;
-    }
-
-    if (!formData.title.trim()) {
-      setError('Please enter a title for your kos');
-      return;
-    }
-
-    if (!formData.address.trim()) {
-      setError('Please enter an address');
-      return;
-    }
-
-    if (formData.monthly_price <= 0) {
-      setError('Please enter a valid monthly price');
-      return;
-    }
-
-    if (formData.available_rooms > formData.total_rooms) {
-      setError('Available rooms cannot exceed total rooms');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
+    setSaving(true);
+    setError('');
 
     try {
-      // Upload images first if any
+      // Upload new images if any
       let imageData = null;
       if (uploadedImages.length > 0) {
         imageData = await uploadImages(uploadedImages);
       }
 
-      // Prepare kos data
-      const kosPayload = {
+      // Prepare update payload
+      const updatePayload = {
         ...formData,
-        cover_image: imageData?.[coverIndex]?.public_id || null,
-        cover_image_url: imageData?.[coverIndex]?.secure_url || null,
-        images: imageData?.map(img => img.public_id) || [],
-        image_urls: imageData?.map(img => img.secure_url) || []
       };
 
-      const response = await fetch('/api/kos', {
-        method: 'POST',
+      // Add image data if new images were uploaded
+      if (imageData) {
+        updatePayload.cover_image = imageData[coverIndex]?.public_id;
+        updatePayload.cover_image_url = imageData[coverIndex]?.secure_url;
+        updatePayload.images = imageData.map(img => img.public_id);
+        updatePayload.image_urls = imageData.map(img => img.secure_url);
+      }
+
+      const response = await fetch(`/api/kos/${id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(kosPayload),
+        body: JSON.stringify(updatePayload),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create kos listing');
-      }
+      if (!response.ok) throw new Error('Failed to update kos');
 
-      const result = await response.json();
       router.push('/dashboard');
     } catch (error) {
-      console.error('Error creating kos:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create kos listing');
+      console.error('Error updating kos:', error);
+      setError('Failed to update kos listing');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -157,6 +190,32 @@ export default function NewKosPage() {
       [name]: type === 'number' ? parseFloat(value) || 0 : value
     }));
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-center min-h-64">
+            <div className="text-lg">Loading kos details...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!kos) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <div className="container mx-auto p-6">
+          <div className="text-center text-red-600">
+            Kos listing not found
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -174,10 +233,10 @@ export default function NewKosPage() {
           </Link>
           
           <h1 className="text-2xl font-bold text-gray-900">
-            Create New Kos Listing
+            Edit Kos Listing
           </h1>
           <p className="mt-1 text-sm text-gray-600">
-            Fill out the information below to create your kos listing
+            Update your kos listing information
           </p>
         </div>
       </div>
@@ -206,7 +265,6 @@ export default function NewKosPage() {
                   value={formData.title}
                   onChange={handleInputChange}
                   required
-                  placeholder="e.g., Kos Putri Sakura"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -238,7 +296,6 @@ export default function NewKosPage() {
                   onChange={handleInputChange}
                   required
                   min="0"
-                  placeholder="e.g., 1500000"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -283,7 +340,6 @@ export default function NewKosPage() {
                   value={formData.description}
                   onChange={handleInputChange}
                   rows={4}
-                  placeholder="Describe your kos facilities, rules, and other important information..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -295,6 +351,8 @@ export default function NewKosPage() {
             <h2 className="text-lg font-medium text-gray-900 mb-6">Images</h2>
             <ImageUpload
               onImagesChange={handleImagesChange}
+              existingImages={kos.image_urls || []}
+              existingCoverIndex={0}
               maxImages={10}
             />
           </div>
@@ -314,14 +372,13 @@ export default function NewKosPage() {
                   onChange={handleInputChange}
                   required
                   rows={2}
-                  placeholder="Enter the full address of your kos..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Select Location on Map
+                  Update Location on Map
                 </label>
                 <LocationPicker
                   initialPosition={[formData.latitude, formData.longitude]}
@@ -377,18 +434,18 @@ export default function NewKosPage() {
             
             <button
               type="submit"
-              disabled={loading}
+              disabled={saving}
               className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center"
             >
-              {loading ? (
+              {saving ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Creating...
+                  Saving...
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Create Kos Listing
+                  Update Kos Listing
                 </>
               )}
             </button>
