@@ -26,13 +26,13 @@ export default function MapPage() {
       
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900">
                 Kos Map - Find Your Perfect Boarding House
               </h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-xs md:text-sm text-gray-600 hidden sm:block">
                 {session ? (
                   <>Welcome back, {session.user?.name}! Explore available kos around ITS campus.</>
                 ) : (
@@ -40,7 +40,7 @@ export default function MapPage() {
                 )}
               </p>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 hidden lg:block">
               Use the filters to narrow down your search
             </div>
           </div>
@@ -48,7 +48,7 @@ export default function MapPage() {
       </div>
 
       {/* Map Section */}
-      <div className="h-[calc(100vh-180px)]">
+      <div className="h-[calc(100vh-140px)] md:h-[calc(100vh-180px)]">
         <KosMap />
       </div>
 

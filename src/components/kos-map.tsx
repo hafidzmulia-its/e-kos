@@ -140,6 +140,12 @@ export default function KosMap({ onKosSelect }: KosMapProps) {
   const [selectedKos, setSelectedKos] = useState<KosMarker | null>(null);
   const mapRef = useRef<any>(null);
   const markerRefs = useRef<{ [key: number]: any }>({});
+  
+  // Bottom sheet state for mobile
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [startY, setStartY] = useState(0);
+  const [currentY, setCurrentY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Fetch kos data
   useEffect(() => {
@@ -176,11 +182,27 @@ export default function KosMap({ onKosSelect }: KosMapProps) {
   const centerMapOnKos = (kos: KosMarker) => {
     if (mapRef.current) {
       const map = mapRef.current;
-      // Center map on the kos location with a nice zoom level
-      map.setView([kos.latitude, kos.longitude], 16, {
-        animate: true,
-        duration: 1 // 1 second animation
-      });
+      
+      // On mobile, offset the center point upward to account for bottom sheet
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        // Calculate offset to move marker higher on screen
+        const targetPoint = map.project([kos.latitude, kos.longitude], 16);
+        // Shift up by 15% of screen height to center in visible area above bottom sheet
+        targetPoint.y -= window.innerHeight * 0.15;
+        const targetLatLng = map.unproject(targetPoint, 16);
+        
+        map.setView(targetLatLng, 16, {
+          animate: true,
+          duration: 1
+        });
+      } else {
+        // Desktop: normal centering
+        map.setView([kos.latitude, kos.longitude], 16, {
+          animate: true,
+          duration: 1
+        });
+      }
       
       // Close all popups first
       map.closePopup();
@@ -195,16 +217,46 @@ export default function KosMap({ onKosSelect }: KosMapProps) {
     }
   };
 
+  // Touch handlers for bottom sheet
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setStartY(e.touches[0].clientY);
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    setCurrentY(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    
+    const diff = startY - currentY;
+    
+    // If swiped up more than 50px, expand
+    if (diff > 50) {
+      setIsExpanded(true);
+    }
+    // If swiped down more than 50px, collapse
+    else if (diff < -50) {
+      setIsExpanded(false);
+    }
+    
+    setStartY(0);
+    setCurrentY(0);
+  };
+
   return (
-    <div className="relative h-full flex">
+    <div className="relative h-full w-full flex flex-col md:flex-row overflow-hidden">
       <LeafletIconFix />
       
       {/* Map Container - Interactive Leaflet Map */}
-      <div className="flex-1 relative">
+      <div className="relative w-full md:flex-1 h-full md:h-full z-0">
         <MapContainer
           center={[ITS_LOCATION.lat, ITS_LOCATION.lng]}
           zoom={14}
-          className="h-full w-full rounded-l-lg"
+          className="h-full w-full md:rounded-l-lg"
           style={{ height: '100%', width: '100%' }}
           ref={mapRef}
         >
@@ -243,7 +295,7 @@ export default function KosMap({ onKosSelect }: KosMapProps) {
         </MapContainer>
         
         {/* Map Controls */}
-        <div className="absolute bottom-4 right-4 space-y-2">
+        <div className="absolute bottom-4 right-4 space-y-2 z-10 md:z-auto mb-[calc(30vh+1rem)] md:mb-0">
           <a
             href={`https://www.google.com/maps/search/kos/@${ITS_LOCATION.lat},${ITS_LOCATION.lng},14z`}
             target="_blank"
@@ -251,15 +303,40 @@ export default function KosMap({ onKosSelect }: KosMapProps) {
             className="bg-white shadow-lg border border-gray-200 px-3 py-2 rounded-lg flex items-center space-x-2 hover:bg-gray-50 text-sm"
           >
             <ExternalLink className="w-4 h-4" />
-            <span>Google Maps</span>
+            <span className="hidden sm:inline">Google Maps</span>
+            <span className="sm:hidden">Maps</span>
           </a>
         </div>
       </div>
       
-      {/* Kos List Sidebar */}
-      <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
+      {/* Kos List Sidebar - Desktop: Fixed sidebar, Mobile: Draggable bottom sheet */}
+      <div 
+        className={`
+          fixed md:relative
+          bottom-0 md:bottom-auto
+          left-0 right-0 md:left-auto md:right-auto
+          w-full md:w-96 
+          bg-white 
+          border-t md:border-t-0 md:border-l border-gray-200 
+          flex flex-col 
+          transition-all duration-300 ease-out
+          md:h-full
+          rounded-t-3xl md:rounded-none
+          shadow-2xl md:shadow-none
+          z-50 md:z-auto
+          ${isExpanded ? 'h-[70vh]' : 'h-[30vh]'}
+        `}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Drag Handle - Mobile Only */}
+        <div className="md:hidden flex justify-center py-2 cursor-grab active:cursor-grabbing">
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+        </div>
+        
         {/* Header with Filter Toggle */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-gray-900">Kos Listings</h3>
             <button
