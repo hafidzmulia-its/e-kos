@@ -154,13 +154,15 @@ export default function ImageUpload({
 
     if (images.length + newImages.length > maxImages) {
       alert(`Maximum ${maxImages} images allowed`);
+      setCompressing(false);
+      setCompressionProgress('');
       return;
     }
 
     const updatedImages = [...images, ...newImages];
     setImages(updatedImages);
     
-    // Send base64 strings to parent
+    // Send base64 strings with filenames to parent (format for Vercel Blob API)
     const base64Images = updatedImages.map(img => img.base64);
     onImagesChange(base64Images, coverIndex);
     

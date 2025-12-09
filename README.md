@@ -32,7 +32,7 @@ ITS KosFinder is a full-stack web application that helps new ITS (Institut Tekno
 
 ### 📝 **Listing Management**
 - Create and manage kos listings with intuitive forms
-- Multiple image uploads powered by Cloudinary
+- Multiple image uploads powered by Vercel Blob
 - Interactive location picker with drag-and-drop pin
 - Rich facility selection with visual icons
 - Owner dashboard to track and edit listings
@@ -71,7 +71,7 @@ ITS KosFinder is a full-stack web application that helps new ITS (Institut Tekno
 - **Google OAuth 2.0** - Social login provider
 
 ### **Media Management**
-- **[Cloudinary](https://cloudinary.com/)** - Image hosting, optimization, and CDN
+- **[Vercel Blob](https://vercel.com/docs/storage/vercel-blob)** - Serverless file storage with automatic CDN
 
 ### **Deployment & DevOps**
 - **[Vercel](https://vercel.com/)** - Serverless deployment platform
@@ -91,7 +91,7 @@ Before you begin, ensure you have:
 - **npm** or **yarn** package manager
 - **Supabase account** ([Sign up free](https://supabase.com))
 - **Google Cloud Console account** for OAuth
-- **Cloudinary account** for image hosting
+- **Vercel account** for deployment and blob storage
 
 ### 1️⃣ Clone the Repository
 
@@ -124,10 +124,9 @@ NEXTAUTH_SECRET=your_generated_secret_here
 GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-# Cloudinary Configuration
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+# Vercel Blob Storage (automatically configured in production)
+# For local development, you can leave this empty
+BLOB_READ_WRITE_TOKEN=
 ```
 
 > 💡 **Generate NEXTAUTH_SECRET**: Run `openssl rand -base64 32` or visit [generate-secret.vercel.app/32](https://generate-secret.vercel.app/32)
@@ -170,12 +169,16 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 8. Copy Client ID and Client Secret to `.env.local`
 
 ### 6️⃣ Cloudinary Setup
+### 6️⃣ Vercel Blob Setup (Optional for Local Development)
 
-1. Sign up at [Cloudinary](https://cloudinary.com/)
-2. Go to Dashboard
-3. Copy Cloud Name, API Key, and API Secret to `.env.local`
-4. Create an upload preset named `kos-images` (optional)
+Vercel Blob is automatically configured when you deploy to Vercel. For local development:
 
+1. Go to your [Vercel Dashboard](https://vercel.com/dashboard)
+2. Select your project (or create one)
+3. Go to **Storage** → **Create Database** → **Blob**
+4. Copy the `BLOB_READ_WRITE_TOKEN` to `.env.local` (optional for local testing)
+
+**Note:** In production, Vercel automatically sets the token for you!
 ### 7️⃣ Run Development Server
 
 ```bash
@@ -203,7 +206,7 @@ e-kos/
 │   │   │   │   ├── [id]/             # Individual kos operations
 │   │   │   │   │   ├── images/       # Image management
 │   │   │   │   │   └── reviews/      # Review endpoints
-│   │   │   │   └── my/               # User's own listings
+│   │   │   ├── upload/images/        # Vercel Blob uploadgs
 │   │   │   ├── facilities/           # Facility types endpoint
 │   │   │   ├── reviews/              # Review management
 │   │   │   ├── upload/images/        # Cloudinary upload
@@ -227,7 +230,7 @@ e-kos/
 │   │       └── auth-provider.tsx    # NextAuth session provider
 │   ├── lib/                         # Utility libraries
 │   │   ├── models/                  # Database models (ORM-like)
-│   │   │   ├── kos.ts              # Kos queries & mutations
+│   │   └── vercel-blob.ts          # Vercel Blob helperations
 │   │   │   └── user.ts             # User operations
 │   │   ├── supabase.ts             # Supabase client config
 │   │   └── cloudinary.ts           # Cloudinary helper
@@ -299,7 +302,7 @@ e-kos/
 | Method | Endpoint | Description | Authorization |
 |--------|----------|-------------|---------------|
 | `POST` | `/api/kos` | Create new kos listing | USER/ADMIN |
-| `PUT` | `/api/kos/[id]` | Update kos listing | Owner or ADMIN |
+| `POST` | `/api/upload/images` | Upload images to Vercel Blob | USER/ADMIN |
 | `DELETE` | `/api/kos/[id]` | Delete kos listing | Owner or ADMIN |
 | `GET` | `/api/kos/my` | Get user's own listings | USER/ADMIN |
 | `POST` | `/api/upload/images` | Upload images to Cloudinary | USER/ADMIN |
@@ -387,10 +390,8 @@ This application is optimized for **Vercel** deployment with zero-config setup.
    NEXTAUTH_SECRET=your_production_secret_here
    
    # Google OAuth (Production)
-   GOOGLE_CLIENT_ID=your_google_client_id
-   GOOGLE_CLIENT_SECRET=your_google_client_secret
-   
-   # Cloudinary
+   # Vercel Blob (automatically configured by Vercel)
+   # No manual configuration needed!
    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
    CLOUDINARY_API_KEY=your_api_key
    CLOUDINARY_API_SECRET=your_api_secret

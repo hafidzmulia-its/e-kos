@@ -28,9 +28,10 @@ interface SelectedFacility {
 }
 
 interface ImageUploadResponse {
-  public_id: string;
-  secure_url: string;
-  [key: string]: any;
+  url: string;          // Public CDN URL from Vercel Blob
+  pathname: string;     // Blob pathname (used for deletion)
+  contentType: string;  // MIME type
+  size: number;         // File size in bytes
 }
 
 interface KosPayload extends FormData {
@@ -111,7 +112,13 @@ export default function NewKosPage() {
   const uploadImages = async (images: string[]): Promise<ImageUploadResponse[] | null> => {
     if (images.length === 0) return null;
 
-    console.log('Uploading images to /api/upload/images...');
+    console.log('Uploading images to Vercel Blob...');
+
+    // Convert base64 images to format expected by Vercel Blob API
+    const imageData = images.map((base64, index) => ({
+      base64,
+      filename: `kos-image-${Date.now()}-${index}.jpg`
+    }));
 
     const response = await fetch('/api/upload/images', {
       method: 'POST',
@@ -119,11 +126,9 @@ export default function NewKosPage() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        images,
+        images: imageData,
         folder: 'kos-images',
-        compressionQuality: 80,
-        maxWidth: 1200,
-        maxHeight: 1200
+        maxSizeMB: 10
       }),
     });
 
@@ -134,7 +139,7 @@ export default function NewKosPage() {
     }
 
     const result = await response.json();
-    console.log('Images uploaded successfully:', result.data);
+    console.log('Images uploaded successfully to Vercel Blob:', result.data);
     return result.data;
   };
 
@@ -189,10 +194,10 @@ export default function NewKosPage() {
       // Prepare kos data
       const kosPayload: KosPayload = {
         ...formData,
-        cover_image: imageData?.[coverIndex]?.public_id || null,
-        cover_image_url: imageData?.[coverIndex]?.secure_url || null,
-        images: imageData?.map(img => img.public_id) || [],
-        image_urls: imageData?.map(img => img.secure_url) || [],
+        cover_image: imageData?.[coverIndex]?.pathname || null,
+        cover_image_url: imageData?.[coverIndex]?.url || null,
+        images: imageData?.map(img => img.pathname) || [],
+        image_urls: imageData?.map(img => img.url) || [],
         facilities: selectedFacilities.length > 0 ? selectedFacilities : undefined
       };
 

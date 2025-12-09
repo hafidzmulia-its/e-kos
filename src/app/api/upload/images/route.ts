@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import CloudinaryService from '@/lib/cloudinary';
+import VercelBlobService from '@/lib/vercel-blob';
 
 interface UploadRequest {
-  images: string[]; // base64 encoded images
+  images: Array<{ base64: string; filename: string }>; // base64 encoded images with filenames
   folder?: string;
-  compressionQuality?: number;
-  maxWidth?: number;
-  maxHeight?: number;
+  maxSizeMB?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -26,9 +24,7 @@ export async function POST(request: NextRequest) {
     const { 
       images, 
       folder = 'kos-images',
-      compressionQuality = 80,
-      maxWidth = 1200,
-      maxHeight = 1200
+      maxSizeMB = 10
     }: UploadRequest = await request.json();
 
     if (!images || !Array.isArray(images) || images.length === 0) {
@@ -45,28 +41,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Processing ${images.length} images with server-side compression...`);
+    console.log(`Uploading ${images.length} images to Vercel Blob...`);
 
-    // Upload images to Cloudinary with compression
-    const uploadedImages = await CloudinaryService.uploadMultipleImages(
+    // Upload images to Vercel Blob
+    const uploadedImages = await VercelBlobService.uploadMultipleImages(
       images,
-      folder,
       {
-        quality: compressionQuality,
-        maxWidth,
-        maxHeight
+        folder,
+        maxSizeMB
       }
     );
 
     return NextResponse.json({
-      message: 'Images uploaded successfully',
+      message: 'Images uploaded successfully to Vercel Blob',
       data: uploadedImages
     });
 
   } catch (error) {
     console.error('Image upload error:', error);
     return NextResponse.json(
-      { error: 'Failed to upload images' },
+      { 
+        error: 'Failed to upload images',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
@@ -85,17 +82,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const publicIds = searchParams.get('publicIds')?.split(',') || [];
+    const urls = searchParams.get('urls')?.split(',') || [];
 
-    if (publicIds.length === 0) {
+    if (urls.length === 0) {
       return NextResponse.json(
-        { error: 'No public IDs provided' },
+        { error: 'No image URLs provided' },
         { status: 400 }
       );
     }
 
-    // Delete images from Cloudinary
-    await CloudinaryService.deleteMultipleImages(publicIds);
+    console.log(`Deleting ${urls.length} images from Vercel Blob...`);
+
+    // Delete images from Vercel Blob
+    await VercelBlobService.deleteMultipleImages(urls);
 
     return NextResponse.json({
       message: 'Images deleted successfully'
