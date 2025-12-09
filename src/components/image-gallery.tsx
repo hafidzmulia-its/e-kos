@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 interface ImageGalleryProps {
@@ -41,14 +40,12 @@ export default function ImageGallery({ images, title, coverImageUrl }: ImageGall
         
         {/* Main Image Display */}
         <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100 mb-4">
-          <Image
+          <img
             src={images[selectedIndex]}
             alt={`${title} - Image ${selectedIndex + 1}`}
-            fill
-            className="object-cover cursor-zoom-in"
-            sizes="(max-width: 1024px) 100vw, 66vw"
+            className="w-full h-full object-cover cursor-zoom-in"
             onClick={() => setIsFullscreen(true)}
-            priority={selectedIndex === 0}
+            loading={selectedIndex === 0 ? 'eager' : 'lazy'}
           />
           
           {/* Navigation Arrows */}
@@ -98,12 +95,11 @@ export default function ImageGallery({ images, title, coverImageUrl }: ImageGall
                       : 'border-gray-200 hover:border-gray-400'
                   }`}
                 >
-                  <Image
+                  <img
                     src={imageUrl}
                     alt={`Thumbnail ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="80px"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                   {imageUrl === coverImageUrl && (
                     <div className="absolute inset-0 bg-blue-500/20 flex items-end justify-center pb-1">
@@ -137,21 +133,19 @@ export default function ImageGallery({ images, title, coverImageUrl }: ImageGall
           </button>
 
           {/* Fullscreen Image */}
+          {/* Fullscreen Image */}
           <div
             className="relative w-full h-full flex items-center justify-center p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative w-full h-full max-w-6xl max-h-[90vh]">
-              <Image
+            <div className="relative w-full h-full max-w-6xl max-h-[90vh] flex items-center justify-center">
+              <img
                 src={images[selectedIndex]}
                 alt={`${title} - Image ${selectedIndex + 1}`}
-                fill
-                className="object-contain"
-                sizes="100vw"
-                priority
+                className="max-w-full max-h-full object-contain"
+                loading="eager"
               />
             </div>
-
             {/* Navigation in Fullscreen */}
             {images.length > 1 && (
               <>
@@ -201,12 +195,11 @@ export default function ImageGallery({ images, title, coverImageUrl }: ImageGall
                         : 'border-white/30 hover:border-white/60'
                     }`}
                   >
-                    <Image
+                    <img
                       src={imageUrl}
                       alt={`Thumbnail ${index + 1}`}
-                      fill
-                      className="object-cover"
-                      sizes="64px"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                   </button>
                 ))}

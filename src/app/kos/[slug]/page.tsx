@@ -3,7 +3,6 @@ import { KosModel } from '@/lib/models/kos';
 import Navigation from '@/components/navigation';
 import ImageGallery from '@/components/image-gallery';
 import Link from 'next/link';
-import Image from 'next/image';
 import { MapPin, Users, DollarSign, Bed, ArrowLeft, ImageIcon } from 'lucide-react';
 
 interface KosDetailPageProps {
@@ -128,12 +127,11 @@ export default async function KosDetailPage({ params }: KosDetailPageProps) {
                   Image
                 </h2>
                 <div className="relative aspect-video rounded-lg overflow-hidden">
-                  <Image
+                  <img
                     src={kos.cover_image_url}
                     alt={kos.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 66vw"
+                    className="w-full h-full object-cover"
+                    loading="eager"
                   />
                 </div>
               </div>
